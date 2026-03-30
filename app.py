@@ -2,40 +2,31 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import date
-import hashlib
 
-# PENGATURAN HALAMAN
-st.set_page_config(page_title="Sistem Deadline Pesanan", page_icon="📦", layout="wide")
+st.set_page_config(page_title="TickTrack", page_icon="📦", layout="wide")
 
-# Pilihan status dan prioritas
 PILIHAN_STATUS    = ["Belum", "Proses", "Selesai", "Terlambat"]
 PILIHAN_PRIORITAS = ["Tinggi", "Normal", "Rendah"]
 
-# Warna untuk status
 WARNA_STATUS = {
-    "Belum"    : "#95a5a6",  # abu
-    "Proses"   : "#f39c12",  # oranye
-    "Selesai"  : "#2ecc71",  # hijau
-    "Terlambat": "#e74c3c",  # merah 
-    }
+    "Belum"    : "#95a5a6", 
+    "Proses"   : "#f39c12",  
+    "Selesai"  : "#2ecc71", 
+    "Terlambat": "#e74c3c",}
 
-# Warna untuk prioritas
 WARNA_PRIORITAS = {
-    "Tinggi": "#e74c3c",  # merah
-    "Normal": "#3498db",  # biru
-    "Rendah": "#95a5a6",  # abu
-    }
+    "Tinggi": "#e74c3c", 
+    "Normal": "#3498db",  
+    "Rendah": "#95a5a6",}
 
-ADMIN_USERNAME      = "admin"
+ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-# DATABASE
 @st.cache_resource
 def buat_koneksi():
-    """Buat koneksi ke database dan buat tabel jika belum ada."""
     conn = sqlite3.connect("pesanan.db", check_same_thread=False)
     conn.executescript("""CREATE TABLE IF NOT EXISTS pesanan (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
             nama_pelanggan TEXT NOT NULL,
             nama_pesanan   TEXT NOT NULL,
             deadline       TEXT NOT NULL,
@@ -45,33 +36,26 @@ def buat_koneksi():
     conn.commit()
     return conn
 
-
 def jalankan(sql, params=()):
-    """Jalankan perintah SQL yang mengubah data."""
     conn = buat_koneksi()
     conn.execute(sql, params)
     conn.commit()
 
-
 def ambil_data(sql, params=()):
-    """Ambil data dari database, kembalikan sebagai list of dict."""
     conn = buat_koneksi()
     conn.row_factory = sqlite3.Row
     hasil = conn.execute(sql, params).fetchall()
     return [dict(baris) for baris in hasil]
 
-# FUNGSI PESANAN
 def ambil_semua_pesanan():
     return ambil_data("SELECT * FROM pesanan ORDER BY deadline ASC")
 
 def tambah_pesanan(nama_pelanggan, nama_pesanan, deadline, prioritas):
-    jalankan(
-        "INSERT INTO pesanan (nama_pelanggan, nama_pesanan, deadline, prioritas, status, dibuat) VALUES (?,?,?,?,?,?)",
+    jalankan("INSERT INTO pesanan (nama_pelanggan, nama_pesanan, deadline, prioritas, status, dibuat) VALUES (?,?,?,?,?,?)",
         (nama_pelanggan, nama_pesanan, deadline, prioritas, "Belum", date.today().isoformat()))
 
 def ubah_pesanan(id_pesanan, nama_pelanggan, nama_pesanan, deadline, prioritas, status):
-    jalankan(
-        "UPDATE pesanan SET nama_pelanggan=?, nama_pesanan=?, deadline=?, prioritas=?, status=? WHERE id=?",
+    jalankan("UPDATE pesanan SET nama_pelanggan=?, nama_pesanan=?, deadline=?, prioritas=?, status=? WHERE id=?",
         (nama_pelanggan, nama_pesanan, deadline, prioritas, status, id_pesanan) )
 
 def hapus_pesanan(id_pesanan):
@@ -81,11 +65,9 @@ def update_status(id_pesanan, status_baru):
     jalankan("UPDATE pesanan SET status=? WHERE id=?", (status_baru, id_pesanan))
 
 def perbarui_status_terlambat():
-    """Otomatis ubah status jadi Terlambat jika deadline sudah lewat dan masih Proses."""
     hari_ini = date.today().isoformat()
     jalankan("UPDATE pesanan SET status='Terlambat' WHERE status='Proses' AND deadline < ?",(hari_ini,))
 
-# SESSION STATE
 if "is_admin"   not in st.session_state:
     st.session_state.is_admin  = False
 if "edit_id" not in st.session_state:
@@ -93,10 +75,8 @@ if "edit_id" not in st.session_state:
 if "filter_status" not in st.session_state:
     st.session_state.filter_status = "Semua"
 
-# JALANKAN PENGECEKAN OTOMATIS TERLAMBAT
 perbarui_status_terlambat()
 
-# AMBIL DATA & HITUNG STATISTIK
 semua_pesanan = ambil_semua_pesanan()
 hari_ini      = date.today()
 
@@ -106,19 +86,16 @@ total_proses    = sum(1 for p in semua_pesanan if p["status"] == "Proses")
 total_selesai   = sum(1 for p in semua_pesanan if p["status"] == "Selesai")
 total_terlambat = sum(1 for p in semua_pesanan if p["status"] == "Terlambat")
 
-# Pesanan yang deadlinenya <= 3 hari lagi dan masih Proses atau Belum
 akan_terlambat = [
     p for p in semua_pesanan
     if p["status"] in ("Proses", "Belum")
     and (date.fromisoformat(p["deadline"]) - hari_ini).days <= 3
     and (date.fromisoformat(p["deadline"]) - hari_ini).days >= 0]
 
-# TAMPILAN - JUDUL
-st.title("📦 Sistem Deadline Pesanan")
+st.title("📦 TickTrack")
 st.caption("Kelola dan pantau deadline pesanan pelanggan Anda")
 st.divider()
 
-# TAMPILAN - NOTIFIKASI PERINGATAN
 if akan_terlambat:
     st.warning(f"⚠️ **{len(akan_terlambat)} pesanan** mendekati deadline!")
     with st.expander("Lihat pesanan yang mendekati deadline"):
@@ -128,7 +105,6 @@ if akan_terlambat:
             label = "Hari ini!" if sisa == 0 else f"{sisa} hari lagi"
             st.write(f"{p['nama_pelanggan']} — {p['nama_pesanan']} — Deadline: {dl.strftime('%d %b %Y')} ({label})")
 
-# TAMPILAN - STATISTIK
 k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Total Pesanan",  total_pesanan)
 k2.metric("Belum Dimulai",  total_belum)
@@ -138,10 +114,8 @@ k5.metric("Terlambat",      total_terlambat)
 
 st.divider()
 
-# TAMPILAN - LAYOUT UTAMA
 kolom_kiri, kolom_kanan = st.columns([1, 2], gap="large")
 
-# KOLOM KIRI - Form Tambah / Edit Pesanan
 with st.sidebar:
     st.header("Panel Admin")
  
@@ -174,18 +148,11 @@ with st.sidebar:
 with kolom_kiri:
 
     if st.session_state.is_admin:
-            pesanan_diedit = next(
-                (p for p in semua_pesanan if p["id"] == st.session_state.edit_id),
-                None)
-
             pesanan_diedit = None
-
             for p in semua_pesanan:
                 if p["id"] == st.session_state.edit_id:
                     pesanan_diedit = p
                     break
-
-        # pesanan_diedit = next((p for p in semua_pesanan if p["id"] == st.session_state.edit_id), None)
             
             judul_form = "Edit Pesanan" if pesanan_diedit else "Tambah Pesanan Baru"
             st.subheader(judul_form)
@@ -220,21 +187,11 @@ with kolom_kiri:
                         st.error("Nama pesanan wajib diisi!")
                     else:
                         if pesanan_diedit:
-                            ubah_pesanan(
-                                st.session_state.edit_id,
-                                nama_pelanggan.strip(),
-                                nama_pesanan.strip(),
-                                deadline.isoformat(),
-                                prioritas,
-                                status)
+                            ubah_pesanan(st.session_state.edit_id, nama_pelanggan.strip(), nama_pesanan.strip(), deadline.isoformat(), prioritas, status)
                             st.success("Pesanan berhasil diperbarui!")
                             st.session_state.edit_id = None
                         else:
-                            tambah_pesanan(
-                                nama_pelanggan.strip(),
-                                nama_pesanan.strip(),
-                                deadline.isoformat(),
-                                prioritas)
+                            tambah_pesanan(nama_pelanggan.strip(), nama_pesanan.strip(), deadline.isoformat(),prioritas)
                             st.success(f"Pesanan '{nama_pesanan}' berhasil ditambahkan!")
                         st.rerun()
 
@@ -244,19 +201,16 @@ with kolom_kiri:
                     st.rerun()
 
     else:
-        # Tampilan untuk pengunjung (bukan admin)
         st.subheader("🔒 Area Admin")
         st.info(
-            "Silakan **login sebagai admin** melalui panel di sebelah kiri "
-            "untuk menambah atau mengedit pesanan."
-        )
+            "Silakan login sebagai admin melalui panel di sebelah kiri"
+            "untuk menambah atau mengedit pesanan.")
         st.markdown("""
             **Sebagai pengunjung, Anda tetap bisa:**
             - Melihat seluruh daftar pesanan
             - Memfilter pesanan berdasarkan status
             - Melihat ringkasan tabel""")
 
-# KOLOM KANAN - Daftar Pesanan
 with kolom_kanan:
     st.subheader("Daftar Pesanan")
 
