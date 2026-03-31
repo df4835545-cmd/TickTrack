@@ -170,7 +170,6 @@ with kolom_kiri:
                 prioritas = st.selectbox("Prioritas", PILIHAN_PRIORITAS, index=PILIHAN_PRIORITAS.index(pesanan_diedit["prioritas"]) 
                                         if pesanan_diedit else 1)
 
-                # Status hanya tampil saat edit
                 if pesanan_diedit:
                     status = st.selectbox("Status", PILIHAN_STATUS, index=PILIHAN_STATUS.index(pesanan_diedit["status"]))
                 else:
@@ -263,19 +262,16 @@ with kolom_kanan:
                 if st.session_state.is_admin:
                     ak1, ak2, ak3, ak4, ak5 = st.columns(5)
 
-                    # Mulai Proses (hanya jika status Belum)
                     if p["status"] == "Belum":
                         if ak1.button("Proses", key=f"proses_{p['id']}"):
                             update_status(p["id"], "Proses")
                             st.rerun()
 
-                    # Tandai Selesai (jika belum selesai)
                     if p["status"] != "Selesai":
                         if ak2.button("Selesai", key=f"selesai_{p['id']}"):
                             update_status(p["id"], "Selesai")
                             st.rerun()
 
-                    # Kembalikan ke Belum (jika Selesai atau Terlambat)
                     if p["status"] in ["Selesai", "Terlambat"]:
                         if ak3.button("Belum", key=f"belum_{p['id']}"):
                             update_status(p["id"], "Belum")
@@ -294,7 +290,7 @@ with kolom_kanan:
                     st.caption("🔒 Login sebagai admin untuk mengelola pesanan ini.")
 
     st.divider()
-    st.subheader("Ringkasan Tabel")
+    st.subheader("Tabel Pesanan")
 
     if semua_pesanan:
         df = pd.DataFrame(semua_pesanan)[["nama_pelanggan", "nama_pesanan", "deadline", "prioritas", "status", "dibuat"]]
