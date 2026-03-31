@@ -3,7 +3,6 @@ import sqlite3
 import pandas as pd
 from datetime import date
 
-# ── Tambahan untuk Supabase ──────────────────────────────────────────────────
 from supabase import create_client, Client
 
 st.set_page_config(page_title="TickTrack", page_icon="📦", layout="wide")
@@ -15,24 +14,22 @@ WARNA_STATUS = {
     "Belum"    : "#95a5a6", 
     "Proses"   : "#f39c12",  
     "Selesai"  : "#2ecc71", 
-    "Terlambat": "#e74c3c",}
+    "Terlambat": "#e74c3c"}
 
 WARNA_PRIORITAS = {
     "Tinggi": "#e74c3c", 
     "Normal": "#3498db",  
-    "Rendah": "#95a5a6",}
+    "Rendah": "#95a5a6"}
 
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-# ── Ganti buat_koneksi: pakai Supabase ───────────────────────────────────────
 @st.cache_resource
 def buat_koneksi() -> Client:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
-# ── Ganti fungsi-fungsi DB: pakai Supabase SDK ───────────────────────────────
 def ambil_semua_pesanan():
     res = buat_koneksi().table("pesanan").select("*").order("deadline").execute()
     return res.data or []
