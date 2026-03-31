@@ -3,6 +3,9 @@ import sqlite3
 import pandas as pd
 from datetime import date
 
+# ── Tambahan untuk Supabase ──────────────────────────────────────────────────
+from supabase import create_client, Client
+
 st.set_page_config(page_title="TickTrack", page_icon="📦", layout="wide")
 
 PILIHAN_STATUS    = ["Belum", "Proses", "Selesai", "Terlambat"]
@@ -22,51 +25,48 @@ WARNA_PRIORITAS = {
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
+# ── Ganti buat_koneksi: pakai Supabase ───────────────────────────────────────
 @st.cache_resource
-def buat_koneksi():
-    conn = sqlite3.connect("pesanan.db", check_same_thread=False)
-    conn.executescript("""CREATE TABLE IF NOT EXISTS pesanan (
-            id             INTEGER PRIMARY KEY AUTOINCREMENT,
-            nama_pelanggan TEXT NOT NULL,
-            nama_pesanan   TEXT NOT NULL,
-            deadline       TEXT NOT NULL,
-            prioritas      TEXT NOT NULL DEFAULT 'Normal',
-            status         TEXT NOT NULL DEFAULT 'Belum',
-            dibuat         TEXT NOT NULL); """)
-    conn.commit()
-    return conn
+def buat_koneksi() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
-def jalankan(sql, params=()):
-    conn = buat_koneksi()
-    conn.execute(sql, params)
-    conn.commit()
-
-def ambil_data(sql, params=()):
-    conn = buat_koneksi()
-    conn.row_factory = sqlite3.Row
-    hasil = conn.execute(sql, params).fetchall()
-    return [dict(baris) for baris in hasil]
-
+# ── Ganti fungsi-fungsi DB: pakai Supabase SDK ───────────────────────────────
 def ambil_semua_pesanan():
-    return ambil_data("SELECT * FROM pesanan ORDER BY deadline ASC")
+    res = buat_koneksi().table("pesanan").select("*").order("deadline").execute()
+    return res.data or []
 
 def tambah_pesanan(nama_pelanggan, nama_pesanan, deadline, prioritas):
-    jalankan("INSERT INTO pesanan (nama_pelanggan, nama_pesanan, deadline, prioritas, status, dibuat) VALUES (?,?,?,?,?,?)",
-        (nama_pelanggan, nama_pesanan, deadline, prioritas, "Belum", date.today().isoformat()))
+    buat_koneksi().table("pesanan").insert({
+        "nama_pelanggan": nama_pelanggan,
+        "nama_pesanan"  : nama_pesanan,
+        "deadline"      : deadline,
+        "prioritas"     : prioritas,
+        "status"        : "Belum",
+        "dibuat"        : date.today().isoformat(),
+    }).execute()
 
 def ubah_pesanan(id_pesanan, nama_pelanggan, nama_pesanan, deadline, prioritas, status):
-    jalankan("UPDATE pesanan SET nama_pelanggan=?, nama_pesanan=?, deadline=?, prioritas=?, status=? WHERE id=?",
-        (nama_pelanggan, nama_pesanan, deadline, prioritas, status, id_pesanan) )
+    buat_koneksi().table("pesanan").update({
+        "nama_pelanggan": nama_pelanggan,
+        "nama_pesanan"  : nama_pesanan,
+        "deadline"      : deadline,
+        "prioritas"     : prioritas,
+        "status"        : status,
+    }).eq("id", id_pesanan).execute()
 
 def hapus_pesanan(id_pesanan):
-    jalankan("DELETE FROM pesanan WHERE id=?", (id_pesanan,))
+    buat_koneksi().table("pesanan").delete().eq("id", id_pesanan).execute()
 
 def update_status(id_pesanan, status_baru):
-    jalankan("UPDATE pesanan SET status=? WHERE id=?", (status_baru, id_pesanan))
+    buat_koneksi().table("pesanan").update({"status": status_baru}).eq("id", id_pesanan).execute()
 
 def perbarui_status_terlambat():
     hari_ini = date.today().isoformat()
-    jalankan("UPDATE pesanan SET status='Terlambat' WHERE status='Proses' AND deadline < ?",(hari_ini,))
+    buat_koneksi().table("pesanan").update({"status": "Terlambat"}).in_(
+        "status", ["Proses"]
+    ).lt("deadline", hari_ini).execute()
 
 if "is_admin"   not in st.session_state:
     st.session_state.is_admin  = False
