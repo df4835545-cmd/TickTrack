@@ -201,13 +201,7 @@ with kolom_kiri:
     else:
         st.subheader("🔒 Area Admin")
         st.info(
-            "Silakan login sebagai admin melalui panel di sebelah kiri"
-            "untuk menambah atau mengedit pesanan.")
-        st.markdown("""
-            **Sebagai pengunjung, Anda tetap bisa:**
-            - Melihat seluruh daftar pesanan
-            - Memfilter pesanan berdasarkan status
-            - Melihat ringkasan tabel""")
+            "Silakan login sebagai admin melalui panel di sebelah kiri untuk menambah atau mengedit pesanan.")
 
 with kolom_kanan:
     st.subheader("Daftar Pesanan")
