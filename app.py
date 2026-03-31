@@ -2,10 +2,12 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import date
-
 from supabase import create_client, Client
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="TickTrack", page_icon="📦", layout="wide")
+
+st_autorefresh(interval=5000)
 
 PILIHAN_STATUS    = ["Belum", "Proses", "Selesai", "Terlambat"]
 PILIHAN_PRIORITAS = ["Tinggi", "Normal", "Rendah"]
